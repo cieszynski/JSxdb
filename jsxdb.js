@@ -47,9 +47,9 @@ class Store {
     #execute_cursor_query = (cursor) => Promise.resolve(cursor.value);
 
     // called from execute_and, execute_or
-    #execute_cursor_update = (cursor, payload) => new Promise((resolve) => {
+    #execute_cursor_update = (cursor, obj) => new Promise((resolve) => {
         cursor
-            .update(Object.assign(cursor.value, payload))
+            .update(Object.assign(cursor.value, obj))
             .onsuccess = (event) => {
                 resolve(event.target.source.value)
             };
@@ -71,7 +71,7 @@ class Store {
 
         // if we update the indexeddb, at this point
         // there are odd number of arguments
-        const payload = /^(update)/.test(verb)
+        const obj = /^(update)/.test(verb)
             ? args.pop()
             : undefined;
 
@@ -104,7 +104,7 @@ class Store {
                         promises.push(this.#execute_cursor_query(cursor));
                         break;
                     case 'update':
-                        promises.push(this.#execute_cursor_update(cursor, payload));
+                        promises.push(this.#execute_cursor_update(cursor, obj));
                         break;
                     case 'delete':
                         promises.push(this.#execute_cursor_delete(cursor));
@@ -124,7 +124,7 @@ class Store {
 
         // if we update the indexeddb, at this point
         // there are odd number of arguments
-        const payload = /^(update)$/.test(verb)
+        const obj = /^(update)$/.test(verb)
             ? args.pop()
             : undefined;
 
@@ -164,7 +164,7 @@ class Store {
                             promises.push(this.#execute_cursor_query(cursor));
                             break;
                         case 'update':
-                            promises.push(this.#execute_cursor_update(cursor, payload));
+                            promises.push(this.#execute_cursor_update(cursor, obj));
                             break;
                         case 'delete':
                             promises.push(this.#execute_cursor_delete(cursor));
@@ -242,10 +242,10 @@ class Store {
                 }
             },
             update: {
-                value: function (payload) {
+                value: function (obj) {
                     switch (true) {
-                        case !!this.and: return this.execute_and('update', reverse, limit, ...args.concat(payload));
-                        case !!this.or: return this.execute_or('update', reverse, limit, ...args.concat(payload));
+                        case !!this.and: return this.execute_and('update', reverse, limit, ...args.concat(obj));
+                        case !!this.or: return this.execute_or('update', reverse, limit, ...args.concat(obj));
                     }
                 }
             },

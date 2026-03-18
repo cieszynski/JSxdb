@@ -75,8 +75,9 @@
 
                 console.table(result);
                 store1.clear();
-            } catch (ex) { console.error(ex) }
             db.close();
+
+            } catch (ex) { console.error(ex) }
         }
 
         runTest();

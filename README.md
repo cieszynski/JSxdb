@@ -31,7 +31,7 @@ self.addEventListener("install", async (event) => {
 import { JSxdb } from "./path/to/jsxdb.js";
 
 window.addEventListener("load", async (event) => {
-    const db = await JSxdb.init("test.db");
+    const db = await JSxdb.open("test.db");
 
     const [store1] = await db.write("user");
 
@@ -46,13 +46,27 @@ window.addEventListener("load", async (event) => {
     }
 
     const result = await store1
-        .where('firstname', JSxdb.eq('a'))
-        .or('lastname', JSxdb.gt('B'))
+        .where("firstname", JSxdb.eq("a"))
+        .or("lastname", JSxdb.gt("B"))
         .reverse()
         .limit(2)
         .query();
 
     console.log(result);
+
+    // expected result:
+    // [
+    //     {
+    //         "firstname": "a",
+    //         "lastname": "A",
+    //         "id": 97,
+    //     },
+    //     {
+    //         "firstname": "b",
+    //         "lastname": "B",
+    //         "id": 98,
+    //     },
+    // ];
 
     db.close();
 });
