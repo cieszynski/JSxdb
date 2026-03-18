@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>CookBook: Search field</title>
+    <meta charset="utf-8">
+    <style>
+        input {
+            width: 200px;
+        }
+
+        main {
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        output {
+            text-overflow: ellipsis;
+            /* Both of the following are required for text-overflow */
+            white-space: nowrap;
+            overflow: hidden;
+            display: block;
+            width: 100%;
+
+            &:empty::after {
+                content: 'The results will appear here...';
+            }
+        }
+    </style>
+    <script>
+        const names = [
+            { name: 'Aaliyah' },
+            { name: 'Ada' },
+            { name: 'Adelheid' },
+            { name: 'Adelina' },
+            { name: 'Adriana' },
+            { name: 'Agathe' },
+            { name: 'Agnes' },
+            { name: 'Aisha' },
+            { name: 'Alea' },
+            { name: 'Alena' },
+            { name: 'Alessia' },
+            { name: 'Alexa' },
+            { name: 'Alexandra' },
+            { name: 'Aleyna' },
+            { name: 'Alia' },
+            { name: 'Alice' },
+            { name: 'Alicia' },
+            { name: 'Alina' },
+            { name: 'Alisa' },
+            { name: 'Alison' },
+            { name: 'Alissa' },
+            { name: 'Alma' },
+            { name: 'Alva' },
+            { name: 'Amalia' },
+            { name: 'Amanda' },
+            { name: 'Amara' },
+            { name: 'Amaya' },
+            { name: 'Amelia' },
+            { name: 'Amelie' },
+            { name: 'Amilia' },
+            { name: 'Amina' },
+            { name: 'Amira' },
+            { name: 'Amy' },
+            { name: 'Anastasia' },
+            { name: 'Andrea' },
+            { name: 'Angela' },
+            { name: 'Angelika' },
+            { name: 'Angelina' },
+            { name: 'Anita' },
+            { name: 'Anja' },
+            { name: 'Anke' },
+            { name: 'Ann' },
+            { name: 'Anna' },
+            { name: 'Annabell' },
+            { name: 'Annalena' },
+            { name: 'Anne' },
+            { name: 'Annegret' },
+            { name: 'Annelie' },
+            { name: 'Anneliese' },
+            { name: 'Annemarie' },
+            { name: 'Annette' },
+            { name: 'Anni' },
+            { name: 'Annika' },
+            { name: 'Anouk' },
+            { name: 'Antje' },
+            { name: 'Antonia' },
+            { name: 'Ariana' },
+            { name: 'Arina' },
+            { name: 'Arya' },
+            { name: 'Ashley' },
+            { name: 'Astrid' },
+            { name: 'Asya' },
+            { name: 'Auguste' },
+            { name: 'Aurelia' },
+            { name: 'Aurora' },
+            { name: 'Ava' },
+            { name: 'Ayla' },
+            { name: 'Aylin' },
+            { name: 'Azra' }
+        ]
+    </script>
+</head>
+
+<body>
+    <header>
+        <h1>CookBook: Search field</h1>
+        <form onsubmit="return false" spellcheck="false" autocomplete="off">
+            <search>
+                <input type="search" placeholder="girls' names beginning with A">
+                <hr>
+                <output></output>
+            </search>
+        </form>
+    </header>
+    <hr>
+    <main></main>
+    <script type="module">
+        import { JSxdb } from '../jsxdb.js';
+
+        addEventListener('load', async event => {
+
+            // prepare database
+            const db = await JSxdb.init("searchfield.db", {
+                1: {
+                    values: "@id, name",
+                },
+            });
+
+            const [store1] = await db.write("values");
+            const count = await store1.count();
+
+            // fill the db only one times
+            if (!count) {
+
+                for await (const item of names) {
+                    store1.add(item);
+                }
+            }
+
+            db.close();
+
+            const inputbox = document.querySelector('input');
+            const outputbox = document.querySelector('output');
+            const script = document.querySelector('script[type]');
+            const main = document.querySelector('main');
+
+            inputbox.addEventListener('focus', async event => {
+
+                async function oninput(event) {
+                    const db = await JSxdb.open('searchfield.db');
+                    const [store1] = await db.read("values");
+
+                    const value = event.target.value.trim();
+
+                    if (value.length) {
+                        store1.ignoreCase("name", value, true)
+                            .then(result => result.map(entry => entry.name))
+                            // limit to 100 items, for example 
+                            .then(result => result.slice(0, 100))
+                            .then(result => {
+                                outputbox.innerHTML = result.join(', ');
+                            })
+                    } else {
+                        outputbox.innerHTML = '';
+                    }
+                }
+
+                event.target.addEventListener('input', oninput);
+                event.target.addEventListener('blur', event => {
+                    event.target.removeEventListener('input', oninput);
+                    db.close();
+                }, { once: true });
+            });
+
+            main.innerText = script.innerText;
+        });
+    </script>
+</body>
+
+</html>

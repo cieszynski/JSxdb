@@ -182,10 +182,10 @@ class Store {
 
     // called by add, clear, cout, delete,
     // get, getAll, getAllKeys, getKey, put
-    #execute = (verb, ...args) => /* new Promise((resolve, reject) =>  */ {
-        this.#store.transaction.onerror = (event) => Promise.reject(event.target.error);
-        this.#store[verb](...args).onsuccess = (event) => Promise.resolve(event.target.result);
-    }/* ) */;
+    #execute = (verb, ...args) => new Promise((resolve, reject) =>  {
+        this.#store.transaction.onerror = (event) => reject(event.target.error);
+        this.#store[verb](...args).onsuccess = (event) => resolve(event.target.result);
+    });
 
     abort = () => this.#store.transaction.abort();
 
