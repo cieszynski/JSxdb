@@ -67,11 +67,10 @@
                     store1.add(item);
                 }
 
-
                 const result = await store1
-                    .where('firstname', JSxdb.eq('a'))
-                    .or('lastname', JSxdb.ge('B'))
-                    .limit(2)
+                    .where('firstname', 'a')
+                    .and('lastname', '<=', 'C')
+                    //.limit(2)
                     .query();
 
                 console.table(result);

@@ -126,7 +126,6 @@
                     values: "@id, name",
                 },
             });
-
             const [store1] = await db.write("values");
             const count = await store1.count();
 
@@ -149,6 +148,7 @@
 
                 async function oninput(event) {
                     const db = await JSxdb.open('searchfield.db');
+
                     const [store1] = await db.read("values");
 
                     const value = event.target.value.trim();

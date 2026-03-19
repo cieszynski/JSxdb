@@ -182,7 +182,7 @@ class Store {
 
     // called by add, clear, cout, delete,
     // get, getAll, getAllKeys, getKey, put
-    #execute = (verb, ...args) => new Promise((resolve, reject) =>  {
+    #execute = (verb, ...args) => new Promise((resolve, reject) => {
         this.#store.transaction.onerror = (event) => reject(event.target.error);
         this.#store[verb](...args).onsuccess = (event) => resolve(event.target.result);
     });
@@ -209,17 +209,32 @@ class Store {
 
     put = (obj, key) => this.#execute('put', obj, key);
 
-    where = (indexName, keyRange) => {
+    where = (indexName, ...keyRangeParams) => {
+
+        const prepare = (...keyRangeParams) => {
+            const [operator, data] = keyRangeParams;
+
+            if (data) switch (operator) {
+                case '>': return JSxdb.gt(data);
+                case '>=': return JSxdb.ge(data);
+                case '<': return JSxdb.lt(data);
+                case '<=': return JSxdb.le(data);
+                case '=': return JSxdb.eq(data);
+            }
+
+            return operator;
+        }
 
         let reverse = false, limit = 0;
 
-        const args = [indexName, keyRange]
+        const args = [indexName, prepare(...keyRangeParams)];
 
         return Object.defineProperties({
             // make these methods from inside
             // of the object callable
             execute_and: this.#execute_and,
-            execute_or: this.#execute_or
+            execute_or: this.#execute_or,
+            prepare: prepare
         }, {
             reverse: {
                 value: function () {
@@ -259,8 +274,8 @@ class Store {
             },
             or: {
                 writable: true,
-                value: function (indexName, keyRange) {
-                    args.push(indexName, keyRange);
+                value: function (indexName, ...keyRangeParams) {
+                    args.push(indexName, this.prepare(...keyRangeParams));
                     // at now, only 'or' is allowed
                     this.and = undefined;
                     return this;
@@ -268,8 +283,8 @@ class Store {
             },
             and: {
                 writable: true,
-                value: function (indexName, keyRange) {
-                    args.push(indexName, keyRange);
+                value: function (indexName, ...keyRangeParams) {
+                    args.push(indexName, this.prepare(...keyRangeParams));
                     // at now, only 'and' is allowed
                     this.or = undefined;
                     return this;
@@ -339,7 +354,7 @@ class Database {
 
     #readwrite = (ro = false, ...storeNames) => {
         const request = this.#db.transaction(storeNames, ro ? 'readonly' : 'readwrite');
-        
+
         return Promise.resolve(storeNames.map((storeName) => {
             return new Store(request.objectStore(storeName));
         }));
@@ -410,55 +425,44 @@ const JSxdb = new class {
 
     init = (name, scheme) => new Promise((resolve, reject) => {
 
+        if (!scheme || (typeof scheme !== 'object')) {
+            return reject(new DOMException(
+                `'${name}': no valid scheme found`,
+                "NotFoundError"
+            ));
+        }
+
+        if (typeof scheme !== 'object') return reject(new DOMException(
+            `'${name}': invalid scheme found`,
+            "TypeError"
+        ));
+
         const ordered = Object.keys(scheme).sort((a, b) => parseFloat(a) - parseFloat(b));
 
-        try {
-            // open the latest version or start an upgrade
-            const request = indexedDB.open(name, ordered.at(-1));
+        // open the latest version or start an upgrade
+        const request = indexedDB.open(name, ordered.at(-1));
 
-            request.onerror = () => reject(request.error);
-            request.onblocked = () => reject(request.error);
-            request.onsuccess = () => resolve(new Database(request.result));
-            request.onupgradeneeded = (event) => onupgradeneeded(
-                event.target.result,
-                event.oldVersion,
-                event.newVersion,
-                scheme
-            );
-
-        } catch (ex) {
-            switch (ex.name) {
-                case 'TypeError':
-                    reject(ex);
-                    break;
-                default:
-                    reject('unknown error');
-            }
-        }
+        request.onerror = () => reject(request.error);
+        request.onblocked = () => reject(request.error);
+        request.onsuccess = () => resolve(new Database(request.result));
+        request.onupgradeneeded = (event) => onupgradeneeded(
+            event.target.result,
+            event.oldVersion,
+            event.newVersion,
+            scheme
+        );
 
     });
 
     open = (name) => new Promise(async (resolve, reject) => {
 
         if (!(await JSxdb.databases).some(db => db.name === name)) {
-            reject(`db "${name}" not found`);
+            reject(new DOMException(`'${name}' not found`, 'NotFoundError'));
         } else {
-
-            try {
-                const request = indexedDB.open(name);
-                request.onerror = () => reject(request.error);
-                request.onblocked = () => reject(request.error);
-                request.onsuccess = () => resolve(new Database(request.result));
-
-            } catch (ex) {
-                switch (ex.name) {
-                    case 'TypeError':
-                        reject(ex.message);
-                        break;
-                    default:
-                        reject('unknown error');
-                }
-            }
+            const request = indexedDB.open(name);
+            request.onerror = () => reject(request.error);
+            request.onblocked = () => reject(request.error);
+            request.onsuccess = () => resolve(new Database(request.result));
         }
     });
 
